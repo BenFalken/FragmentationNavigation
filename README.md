@@ -1,5 +1,5 @@
 # FragmentationNavigation
-Inspired by a paper on spatial navigation from the Fiete Lab, MIT.
+Inspired by a paper on spatial navigation and map fragmentation from the Fiete Lab, MIT.
 
 User may choose either online or offline navigation of an environment they create using pygame.
 
