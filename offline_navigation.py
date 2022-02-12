@@ -45,7 +45,7 @@ def find_error_between_maps(offset_x, offset_y, map_at_origin, investigating_map
 	for tick in range(TICKS):
 		x_point = map_at_origin[tick]*X_COMP[tick] + offset_x
 		y_point = map_at_origin[tick]*Y_COMP[tick] - offset_y
-		round_theta_index = get_round_theta(x_point, y_point)
+		round_theta_index = get_round_theta_index(x_point, y_point)
 		
 		rad = np.sqrt(x_point**2 + y_point**2)
 		map_at_origin_shifted_to_fit_investigating_map[round_theta_index] = np.round(rad, 1)
@@ -140,7 +140,7 @@ def make_distance_matrix(surprise_map):
 	return distance_matrix
 
 # Create isomap from distance matrix of all points. Apply dbscan clustering 
-def create_isomap(distance_matrix):
+def make_isomap(distance_matrix):
 	# Create isomap
 	mds = MDS(n_components=2, dissimilarity="precomputed", random_state=6)
 	results = mds.fit(distance_matrix)
@@ -150,13 +150,25 @@ def create_isomap(distance_matrix):
 	labels = clustering.labels_
 	return coords, labels
 
+# Go through all clusters and cut out the ones with less than the minimum required points to be considered a unique region
+def determine_number_of_significant_regions(labels):
+	unique_region_count = 0
+	for i in range(labels.size):
+		cluster_point_count = 0
+		for label in  labels:
+			if label == i:
+				cluster_point_count += 1
+		if cluster_point_count > MIN_POINTS_FOR_CLUSTER_TO_BE_CONSIDERED_REGION:
+			unique_region_count += 1
+	return unique_region_count
+
 # Plot isomap in matplotlib
 def present_isomap(coords, labels, show_clustering):
 	if show_clustering:
-		num_room_types = max([labels[i] for i in range(labels.size)]) + 1
-		colors = [(randint(0, 255)/255, randint(0, 255)/255, randint(0, 255)/255) for _ in range(num_room_types)]
+		unique_region_count = determine_number_of_significant_regions(labels)
+		colors = [(randint(0, 255)/255, randint(0, 255)/255, randint(0, 255)/255) for _ in range(labels.size + 1)]
 		colors_for_each_coord = [colors[labels[i]] for i in range(labels.size)]
-		plt.title("There are " + str(num_room_types) + " rooms in the environment given")
+		plt.title("There are " + str(unique_region_count) + " regions in the environment given")
 	else:
 		colors_for_each_coord = [(100, 100, 255) for _ in range(coords.shape[0])]
 		plt.title("Approximate isomap of environment below")

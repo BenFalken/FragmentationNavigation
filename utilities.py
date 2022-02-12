@@ -1,3 +1,6 @@
+import numpy as np
+from constants import *
+
 # Determines if the tracker used to generate the spatial map is about to exit bounds
 def in_bounds(val):
 	return val < SIDE_LEN and val >= 0

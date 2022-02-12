@@ -28,9 +28,13 @@ WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 RED = (255, 0, 0)
 BLUE = (0, 0, 255)
+GREEN = (0, 255, 0)
 
 #DBSCAN param
 EPS = 6
+
+# Cutoff for what we define as a room, in terms of how many points are included
+MIN_POINTS_FOR_CLUSTER_TO_BE_CONSIDERED_REGION = 10
 
 # Constants for STM, LTM
 STM_RANGE = 10
@@ -46,6 +50,9 @@ GRID_CELL_PER_COL = int(SIDE_LEN/PIXEL_PER_GRID_CELL)
 
 PRED_THRESHHOLD = 0.9
 
+# Some constants to describe how far and how often BVCs exist in terms of distance from the subject
 BVC_RADIUS = int(SIDE_LEN/2)
+BVC_RAD_STEP = 5
+BVC_TICK_STEP = 16
 
 INVALID_COORD = -1000

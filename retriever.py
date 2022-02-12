@@ -22,6 +22,11 @@ def save_distance_matrix(distance_matrix):
 	pkl.dump(distance_matrix, distance_matrix_file)
 	distance_matrix_file.close()
 
+def save_isomap(isomap):
+	isomap_file = open('isomap', 'ab')
+	pkl.dump(isomap, isomap_file)
+	isomap_file.close()
+
 def retrieve_environment():
 	try:
 		map_file = open('environment','rb')
