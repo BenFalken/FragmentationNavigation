@@ -4,36 +4,83 @@ import matplotlib.pyplot as plt
 from random import randint, choice
 from constants import *
 from utilities import *
+from grid_cell import GridCell
+
+
+# Just tells the user to stand by
+def print_grid_cell_message():
+	print("***************************************************************")
+	print("*")
+	print("*")
+	print("*")
+	print("WE WILL NOW CREATE THE GRID CELLS FOR THE ONLINE NAVIGATION.")
+	print("PLEASE WAIT.")
+	print("*")
+	print("*")
+	print("*")
+	print("***************************************************************")
+
+# Self explanatory. Makes the grid cells
+def create_all_grid_cells():
+	print_grid_cell_message()
+	grid_cells = []
+	for i in range(NUM_GRID_CELLS):
+		new_cell = GridCell(lambda_m=0.5*(i+1))
+		new_cell.construct_firing_map()
+		grid_cells.append(new_cell)
+	return grid_cells
+
+# Graphs the firing maps
+def show_all_firing_maps(grid_cells):
+	for cell in grid_cells:
+		plt.title("Grid cell firing map for the current grid cell")
+		plt.imshow(cell.firing_map)
+		plt.show()
+
+# To be implemented later on once I figure out how to represent grid cell modules as SDRs
+def get_binary_representation_of_location(grid_cells):
+	print("Not now sir")
 
 # Make a cartesian array of BVCs and find the frequencies of each one given the current bounds in terms of r, theta
 def update_bvc(x, y, environment):
-	bvc_cartesian_array = np.zeros((SIDE_LEN, SIDE_LEN))
+	bvc_cartesian_array = np.zeros((BVC_PER_ROW, BVC_PER_COL))
 	sensory_map = generate_sensory_map(x, y, environment)
-	min_rad, max_rad = int(np.min(sensory_map)), int(np.max(sensory_map))
+	min_rad, max_rad = 0, int(np.max(sensory_map)) #int(np.min(sensory_map)), int(np.max(sensory_map))
 	# Range cannot handle floats so we iterate by whole numbers and divide
-	for bvc_r in range(min_rad, max_rad, BVC_RAD_STEP):
-		for bvc_theta_index in range(0, TICKS, BVC_TICK_STEP):
-			bvc_theta = THETAS[bvc_theta_index]
-			bvc_x = int(x + bvc_r*X_COMP[bvc_theta_index])
-			bvc_y = int(y - bvc_r*Y_COMP[bvc_theta_index])
-			bvc_cartesian_array[bvc_x][bvc_y] = get_total_freq(sensory_map, bvc_r, bvc_theta)
+	for tick in range(TICKS):
+		theta = THETAS[tick]
+		r = sensory_map[tick]
+		for tick_for_each_r in range(0, TICKS, BVC_TICK_STEP):
+			theta_for_each_r = THETAS[tick_for_each_r]
+			bvc_x = int(x + r*X_COMP[tick_for_each_r])
+			bvc_x = int((bvc_x - bvc_x%PIXEL_PER_BVC)/PIXEL_PER_BVC)
+
+			bvc_y = int(y - r*Y_COMP[tick_for_each_r])
+			bvc_y = int((bvc_y - bvc_y%PIXEL_PER_BVC)/PIXEL_PER_BVC)
+			try:
+				bvc_cartesian_array[bvc_y][bvc_x] = get_total_freq(sensory_map, r, theta, theta_for_each_r)
+			except:
+				continue
+
 	return bvc_cartesian_array
 
 # Integrate all values of r and theta across each BVC
-def get_total_freq(sensory_map, preferred_rad, preferred_theta):
-	total_freq = 0
-	for tick in range(TICKS):
-		theta = THETAS[tick]
-		rad = sensory_map[tick]
-		total_freq += freq_at_r_theta(rad, theta, preferred_rad, preferred_theta, sigma_angle=1)
-	return total_freq
+def get_total_freq(sensory_map, r, theta, theta_for_each_r):
+	freq_theta = freq_at_theta(theta, theta_for_each_r, sigma_angle=0.005)
+	freq_r = 1
+	#freq_r = freq_at_r(r, r)
+	return freq_theta*freq_r
 
-# Get the frequency contribution to a BVC at each distinct r and theta
-def freq_at_r_theta(r, theta, d, phi, sigma_angle):
+# Get the frequency contribution to a BVC at each distinct theta
+def freq_at_theta(theta, phi, sigma_angle):
+	theta_component = np.exp((-1*(theta - phi)**2)/sigma_angle)
+	return theta_component
+
+# Get the frequency contribution to a BVC at each distinct r
+def freq_at_r(r, d):
 	sigma_rad = d
-	r_component = np.exp((-1*(r-d)**2)/(2*sigma_rad**2))/np.sqrt(2*np.pi*sigma_rad**2)
-	theta_component = np.exp((-1*(theta-phi)**2)/(2*sigma_angle**2))/np.sqrt(2*np.pi*sigma_angle**2)
-	return r_component*theta_component
+	r_component = np.exp(-1*sigma_rad*(d - r)**2)
+	return r_component
 
 # Chooses a new velocity weighted by previous velocity. This function is unused
 def generate_random_v_change(v):
@@ -55,12 +102,11 @@ def update_random_path(x, y, v_x, v_y):
 
 # Apply a gaussian convolution to the STM
 def create_mov_avg_from_stm(stm, curr_stm_size):
-	mov_avg = np.zeros((SIDE_LEN*SIDE_LEN))
+	mov_avg = np.zeros((BVC_PER_ROW*BVC_PER_COL))
 	memory_slots = np.arange(0, curr_stm_size)
 	weights = np.exp(-1*(memory_slots - int(curr_stm_size/2))**2)
 	for slot in range(0, curr_stm_size):
 		mov_avg += weights[slot]*stm[slot]
-	#print("SUMMED AVG: " + str(np.sum(mov_avg)))
 	return mov_avg
 
 # Get a prediction score by comparing current STM and current BVC activity
@@ -73,13 +119,21 @@ def create_pred_score(stm_map, bvc_array):
 		bvc_array /= np.linalg.norm(bvc_array)
 	return np.dot(stm_map, bvc_array.T)
 
+# Roll back the stm to shift it
+def roll_back_stm(stm):
+	rolled_stm = np.zeros(stm.shape)
+	for slot in range(1, STM_RANGE):
+		rolled_stm[slot - 1] = stm[slot]
+	rolled_stm[-1] = stm[0]
+	return rolled_stm
+
 # Adds a new memory to the STM, or replaces an old one
 def add_memory_to_stm(bvc_array, stm, curr_stm_size):
 	if curr_stm_size < STM_RANGE:
 		stm[curr_stm_size] = bvc_array.flatten()
 		curr_stm_size += 1
 	else:
-		stm = roll_back_stm()
+		stm = roll_back_stm(stm)
 		stm[-1] = bvc_array.flatten()
 	return stm, curr_stm_size
 
@@ -89,12 +143,25 @@ def add_memory_to_ltm(bvc_array, ltm, curr_ltm_size):
 		ltm[curr_ltm_size] = bvc_array.flatten()
 		curr_ltm_size += 1
 	else:
-		stm[randint(0, MAX_MEMORIES)] = bvc_array.flatten()
+		ltm[randint(0, MAX_MEMORIES - 1)] = bvc_array.flatten()
 	return ltm, curr_ltm_size
 
-# Currently, this function does not work. Once completed, it will evulate the current observation to previous ones in the LTM and see if any resemble it
+# Basically just takes the dot product of the current bvc values and all memories in the ltm, finding the closest approximation
 def check_if_map_matches_any_current_entries(bvc_array, ltm):
+	normalized_bvc_array = bvc_array.flatten() / np.linalg.norm(bvc_array.flatten())
+	for memory in ltm:
+		normalized_memory = memory
+		if np.max(normalized_memory) != 0:
+			normalized_memory = memory / np.linalg.norm(memory)
+		if np.dot(normalized_memory, normalized_bvc_array.T) >= CERTAINTY_SCORE_THAT_MEMORIES_MATCH:
+			return True
 	return False
+
+# Present the averaged BVC array STM
+def present_stm_avg(stm_avg):
+	plt.title("BVC memory at the current position")
+	plt.imshow(stm_avg.reshape((BVC_PER_ROW, BVC_PER_COL)))
+	plt.show()
 
 # Evaluates the surprisal level given the change from the previous position to the new one
 def make_judgement_on_location(x, y, environment, stm, ltm, curr_stm_size, curr_ltm_size):
@@ -109,19 +176,22 @@ def make_judgement_on_location(x, y, environment, stm, ltm, curr_stm_size, curr_
 		else:
 			ltm, curr_ltm_size = add_memory_to_ltm(bvc_array, ltm, curr_ltm_size)
 			print("New room!")
+	present_stm_avg(stm_avg)
 	print("Current surprisal score: " + str(pred_score))
 	return environment, stm, ltm, curr_stm_size, curr_ltm_size
 
 # Initializes all variables, runs online navigation guided by user in pygame
 def run_navigation(random_or_guided="guided"):
+	grid_cells = create_all_grid_cells()
+	show_all_firing_maps(grid_cells)
 	# Get map of environment to traverse over visually
 	environment, x, y = retriever.retrieve_environment()
 	# Initialize the current sizes of the LTM and STM
 	curr_ltm_size = 0
 	curr_stm_size = 0
 	# Initialize LTM and STM
-	stm = np.zeros((STM_RANGE, SIDE_LEN**2))
-	ltm = np.zeros((MAX_MEMORIES, SIDE_LEN**2))
+	stm = np.zeros((STM_RANGE, BVC_PER_ROW**2))
+	ltm = np.zeros((MAX_MEMORIES, BVC_PER_ROW**2))
 	# Run program in pygame
 	if random_or_guided == "guided":
 		gui.explore_environment(environment, stm, ltm, curr_stm_size, curr_ltm_size)

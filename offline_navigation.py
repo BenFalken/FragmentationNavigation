@@ -34,34 +34,31 @@ def calculate_error_by_gaussian(est_vals, real_vals):
 		surprise += distr_est.pdf((est_vals[tick], real_vals[tick]))
 	return surprise
 
-def find_error_between_maps(offset_x, offset_y, map_at_origin, investigating_map, offset_or_gaussian="offset"):
+# In order to compare maps that are offset from each other, you must convert to cartesian coordinates,
+# Then you must center both at the origin, then convert both back into polar coordinates
+def offset_and_shift_map_at_origin(offset_x, offset_y, map_of_environment):
 	# Initialize the sensory map that shall be shifted to approximate the current "investigating map" at the offset point
 	map_at_origin_shifted_to_fit_investigating_map = np.zeros((TICKS))
-	# These are the true cartesian points of the shifted sensory map, 
-	shifted_origin_map_points_x, shifted_origin_map_points_y = [], []
-	approx_shifted_origin_map_points_x, approx_shifted_origin_map_points_y = [], []
-	investigating_map_points_x, investigating_map_points_y = [], []
 	# For point in the shifted map, find an approximation in terms of valid values r, theta
 	for tick in range(TICKS):
 		x_point = map_at_origin[tick]*X_COMP[tick] + offset_x
 		y_point = map_at_origin[tick]*Y_COMP[tick] - offset_y
+		# Theta values are discretized
+		#So converting cartesian points to polar coordinates means we have to adjust them to fit the discrete theta values we outlined in constants.py
 		round_theta_index = get_round_theta_index(x_point, y_point)
-		
 		rad = np.sqrt(x_point**2 + y_point**2)
 		map_at_origin_shifted_to_fit_investigating_map[round_theta_index] = np.round(rad, 1)
+	return map_at_origin_shifted_to_fit_investigating_map
 
-		shifted_origin_map_points_x.append(x_point)
-		shifted_origin_map_points_y.append(y_point)
+def find_error_between_maps(offset_x, offset_y, map_at_origin, investigating_map, offset_or_gaussian="offset"):
+	map_at_origin_shifted_to_fit_investigating_map = offset_and_shift_map_at_origin(offset_x, offset_y, map_at_origin)
 
-		investigating_map_points_x.append(investigating_map[tick]*X_COMP[tick])
-		investigating_map_points_y.append(investigating_map[tick]*Y_COMP[tick])
-
-	# You be storing the new rads here
+	# This is a container for filling the unfilled polar coordinates at the acceptable theta ticks
 	new_rad_storage = np.zeros(TICKS)
 
 	for tick in range(TICKS):
 		rad = map_at_origin_shifted_to_fit_investigating_map[tick]
-		# If the algorithm fucked up and there's no value stored at a particular value of theta
+		# If one of the slots at a value theta is empty, we really ought to fill it
 		if tick > 0 and tick < TICKS and rad == 0:
 			# Consatantly expand the range at which you look to find the nearest points to make a mean from
 			num_valids = np.argwhere(map_at_origin_shifted_to_fit_investigating_map[tick - 1: tick + 2] > 0).size
@@ -77,6 +74,8 @@ def find_error_between_maps(offset_x, offset_y, map_at_origin, investigating_map
 		if new_rad_storage[tick] != 0:
 			map_at_origin_shifted_to_fit_investigating_map[tick] = np.round(new_rad_storage[tick], 1)
 
+	# Choose whether to evaluate "surprisal" by how unpredictable the radius of the sensory map at a certain value might be,
+	# or rather by how much the two maps differ from each other
 	if offset_or_gaussian == "offset":
 		error = np.linalg.norm(map_at_origin_shifted_to_fit_investigating_map - investigating_map)
 	else:
@@ -100,12 +99,16 @@ def generate_surprise_for_one_point(row, col, all_sensory_maps):
 		for x in range(clamp(col - RADIUS, all_sensory_maps.shape[1]), clamp(col + RADIUS, all_sensory_maps.shape[1])):
 			# Test if current offset point lies on the circle at RADIUS radius away from row, col
 			edge = np.abs(np.sqrt((col - x)**2 + (row - y)**2) - RADIUS) < ERROR
-			if np.sum(all_sensory_maps[y][x]) > 0 and edge:
+			if np.sum(all_sensory_maps[y][x]) > 0: #and edge:
 				offset_x = (col - x)*STEP
 				offset_y = (row - y)*STEP
 				surprise = find_error_between_maps(offset_x, offset_y, all_sensory_maps[row][col], all_sensory_maps[y][x])
 				surprise_map.append(surprise)
-	return sum(surprise_map) / len(surprise_map)
+	
+	if len(surprise_map) > 0:
+		return sum(surprise_map) / len(surprise_map)
+	else:
+		return 0
 
 # For testing purposes only. Find the surprisal at all points on a map based off of one sigle reference
 def generate_surprise_for_one_point_fixed(row, col, all_sensory_maps):
@@ -114,11 +117,15 @@ def generate_surprise_for_one_point_fixed(row, col, all_sensory_maps):
 	surprise_map = np.zeros(all_sensory_maps.shape[:2])
 	for y in range(0, all_sensory_maps.shape[0]):
 		for x in range(0, all_sensory_maps.shape[1]):
+			print(y, x)
 			if np.sum(all_sensory_maps[y][x]) > 0:
 				offset_x = (col - x)*STEP
 				offset_y = (row - y)*STEP
-				surprise = find_error_between_maps(offset_y, offset_x, all_sensory_maps[row][col], all_sensory_maps[y][x])
+				surprise = np.linalg.norm(all_sensory_maps[row][col] - all_sensory_maps[y][x])
+				surprise = find_error_between_maps(offset_x, offset_y, all_sensory_maps[row][col], all_sensory_maps[y][x])
 				surprise_map[y][x] = surprise
+	plt.imshow(surprise_map)
+	plt.show()
 	return surprise_map
 
 # Calculate the distance matrox matrix off all the points with surprisal scores
@@ -132,7 +139,7 @@ def make_distance_matrix(surprise_map):
 	distance_matrix = np.zeros((surprise_map.size, surprise_map.size))
 	for i in range(surprise_map.size):
 		for j in range(surprise_map.size):
-			if surprise_map[i]["surprise"] != surprise_map[j]["surprise"]:\
+			if surprise_map[i]["surprise"] != surprise_map[j]["surprise"]:
 				# We multiply the magnitude of the distance vectore by the prximity of the two points being compared
 				distance_matrix[i][j] = np.log(np.abs(surprise_map[i]["surprise"] - surprise_map[j]["surprise"]))*np.sqrt((surprise_map[i]["coord"][0] - surprise_map[j]["coord"][0])**2 +(surprise_map[i]["coord"][1] - surprise_map[j]["coord"][1])**2)
 			else:
@@ -151,23 +158,38 @@ def make_isomap(distance_matrix):
 	return coords, labels
 
 # Go through all clusters and cut out the ones with less than the minimum required points to be considered a unique region
-def determine_number_of_significant_regions(labels):
-	unique_region_count = 0
-	for i in range(labels.size):
+def determine_significance_of_each_region(labels):
+	each_room_total_point_number = {}
+	for fixed_label in labels:
 		cluster_point_count = 0
-		for label in  labels:
-			if label == i:
+		for label in labels:
+			if label == fixed_label:
 				cluster_point_count += 1
-		if cluster_point_count > MIN_POINTS_FOR_CLUSTER_TO_BE_CONSIDERED_REGION:
+		each_room_total_point_number[str(fixed_label)] = cluster_point_count
+	return each_room_total_point_number
+		
+# Determine the number of regions with a significant number of points (ie: actual rooms)
+def determine_number_of_significant_regions(each_room_total_point_number):
+	unique_region_count = 0
+	for key in each_room_total_point_number.keys():
+		point_number = each_room_total_point_number[key]
+		if point_number > MIN_POINTS_FOR_CLUSTER_TO_BE_CONSIDERED_REGION:
 			unique_region_count += 1
 	return unique_region_count
+
+# Don't bother adding the points that belong to the regions we don't care about
+def clean_coords_of_nonsignificant_regions(coords, labels, each_room_total_point_number):
+	coords = np.array([coords[i] for i in range(coords.shape[0]) if each_room_total_point_number[str(labels[i])] > MIN_POINTS_FOR_CLUSTER_TO_BE_CONSIDERED_REGION])
+	return coords
 
 # Plot isomap in matplotlib
 def present_isomap(coords, labels, show_clustering):
 	if show_clustering:
-		unique_region_count = determine_number_of_significant_regions(labels)
+		each_room_total_point_number = determine_significance_of_each_region(labels)
+		unique_region_count = determine_number_of_significant_regions(each_room_total_point_number)
+		coords = clean_coords_of_nonsignificant_regions(coords, labels, each_room_total_point_number)
 		colors = [(randint(0, 255)/255, randint(0, 255)/255, randint(0, 255)/255) for _ in range(labels.size + 1)]
-		colors_for_each_coord = [colors[labels[i]] for i in range(labels.size)]
+		colors_for_each_coord = [colors[labels[i]] for i in range(labels.size) if each_room_total_point_number[str(labels[i])] > MIN_POINTS_FOR_CLUSTER_TO_BE_CONSIDERED_REGION]
 		plt.title("There are " + str(unique_region_count) + " regions in the environment given")
 	else:
 		colors_for_each_coord = [(100, 100, 255) for _ in range(coords.shape[0])]
@@ -188,12 +210,14 @@ def run_navigation():
 	# Fetch all necessary data
 	environment, pos_x, pos_y = retriever.retrieve_environment()
 	all_sensory_maps = retriever.retrieve_all_sensory_maps(environment)
+	#generate_surprise_for_one_point_fixed(50, 400, all_sensory_maps)
 	surprise_map = retriever.retrieve_surprise_map(all_sensory_maps)
 	distance_matrix = retriever.retrieve_distance_matrix(surprise_map)
 	isomap, labels = retriever.retrieve_isomap(distance_matrix)
 	# Graph everything
 	present_surprise_map(surprise_map)
 	present_isomap(isomap, labels, show_clustering=True)
+	
 
 
 
