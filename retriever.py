@@ -47,6 +47,7 @@ def retrieve_all_sensory_maps(environment):
 		all_sensory_maps_file.close()
 		return all_sensory_maps
 	except:
+		print("We will now create the sensory map file. Please stand by.")
 		all_sensory_maps = offline_navigation.generate_sensory_map_for_all_points(environment)
 		save_all_sensory_maps(all_sensory_maps)
 		return all_sensory_maps
@@ -58,6 +59,7 @@ def retrieve_surprise_map(all_sensory_maps):
 		surprise_map_file.close()
 		return surprise_map
 	except:
+		print("We will now create the surprise map file. Please stand by.")
 		surprise_map = offline_navigation.generate_surprise_map(all_sensory_maps)
 		save_surprise_map(surprise_map)
 		return surprise_map
@@ -69,6 +71,7 @@ def retrieve_isomap(distance_matrix):
 		isomap_file.close()
 		return isomap["isomap"], isomap["labels"]
 	except:
+		print("We will now create the isomap file. Please stand by.")
 		isomap, labels = offline_navigation.make_isomap(distance_matrix)
 		save_isomap({"isomap": isomap, "labels": labels})
 		return isomap, labels
