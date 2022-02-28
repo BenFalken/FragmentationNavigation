@@ -47,7 +47,6 @@ MAX_MEMORIES = 10
 NUM_GRID_CELLS = 1
 BVC_PER_ROW, BVC_PER_COL = 100, 100
 PIXEL_PER_BVC = int(SIDE_LEN/BVC_PER_ROW)
-
 ENVIRONMENT_DIMEN = 5 	# meters
 METERS_TO_PIXELS = int(SIDE_LEN/ENVIRONMENT_DIMEN)
 
@@ -65,16 +64,13 @@ BVC_TICK_STEP = 4
 # If a user hasn't clicked to add a new point to the path in online navigation, we just use this as a stand-in
 INVALID_COORD = -1000
 
-# Parameters for the grid cells
+# Parameters for the grid cells (unused atm)
 NUM_MODULES = 4
 LAMBDA_0 = ENVIRONMENT_DIMEN
 PERIOD_RATIO = 0.5
-
 MAX_SPIKE_COUNT = 1
 
-# Centers
-
+# Centers (unused atm)
 CENTERS_PER_ROW = 5
 CENTERS_PER_COL = 5
-
 PIXELS_PER_CENTER = int(SIDE_LEN/CENTERS_PER_ROW)
