@@ -13,3 +13,4 @@ https://www.biorxiv.org/content/10.1101/2021.10.29.466499v2
 Other sources I used to inform the development of this code: 
 https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2677716/#FD1
 https://edoc.ub.uni-muenchen.de/26577/1/Nagele_Johannes.pdf
+https://numenta.com/blog/2018/05/25/how-grid-cells-map-space/
