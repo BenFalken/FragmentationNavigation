@@ -5,8 +5,8 @@ class GridCell:
 	def __init__(self, lambda_m=0.5, theta=0):
 		self.lambda_m = lambda_m*METERS_TO_PIXELS
 		self.theta = theta
-		self.firing_map = np.zeros((int(SIDE_LEN), int(SIDE_LEN)))
-		self.rad = 50
+		self.firing_map = np.zeros((SIDE_LEN, SIDE_LEN))
+		self.rad = self.lambda_m		#completely arbitrary. Will fix later
 		self.diam = 2*self.rad
 		self.init_centers()
 
@@ -25,7 +25,12 @@ class GridCell:
 			offset_x = int(np.cos(theta_k)*self.rad)
 			offset_y = int(np.sin(theta_k)*self.rad)
 			displacement_mag = np.sqrt(((x - (center_x + offset_x)) **2 + (y - (center_y + offset_y))**2))
-			self.firing_map[clamp(y + offset_y, self.firing_map.shape[1] - 1)][clamp(x + offset_x, self.firing_map.shape[0] - 1)] += np.exp(-1*(displacement_mag**2)/self.lambda_m)
+
+			firing_map_y = y + offset_y
+			firing_map_x = x + offset_x
+
+			if firing_map_y >= 0 and firing_map_y < SIDE_LEN and firing_map_x >= 0 and firing_map_x < SIDE_LEN:
+				self.firing_map[firing_map_y][firing_map_x] += np.exp(-1*(displacement_mag**2)/self.lambda_m)
 
 	# At a particular center, calulate the value of the grid cell firing map
 	def get_firing_map_at_center(self, center):

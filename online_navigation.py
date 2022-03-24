@@ -9,7 +9,7 @@ from grid_cell import GridCell
 
 # Just tells the user to stand by
 def print_grid_cell_message():
-	print("***************************************************************")
+	print("************************************************************")
 	print("*")
 	print("*")
 	print("*")
@@ -18,16 +18,24 @@ def print_grid_cell_message():
 	print("*")
 	print("*")
 	print("*")
-	print("***************************************************************")
+	print("************************************************************")
+
+# Announce a new grid cell was created
+def announce_new_grid_cell(index):
+	print("*")
+	print("Grid Cell " + str(index+1) + " created")
+	print("*")
+	print("*******************")
 
 # Self explanatory. Makes the grid cells
 def create_all_grid_cells():
 	print_grid_cell_message()
 	grid_cells = []
 	for i in range(NUM_GRID_CELLS):
-		new_cell = GridCell(lambda_m=0.5*(i+1))
+		new_cell = GridCell(lambda_m=0.125*(i+1))
 		new_cell.construct_firing_map()
 		grid_cells.append(new_cell)
+		announce_new_grid_cell(i)
 	return grid_cells
 
 # Graphs the firing maps
@@ -182,7 +190,7 @@ def make_judgement_on_location(x, y, environment, stm, ltm, curr_stm_size, curr_
 
 # Initializes all variables, runs online navigation guided by user in pygame
 def run_navigation(random_or_guided="guided"):
-	grid_cells = create_all_grid_cells()
+	grid_cells = retriever.retrieve_grid_cells()
 	show_all_firing_maps(grid_cells)
 	# Get map of environment to traverse over visually
 	environment, x, y = retriever.retrieve_environment()

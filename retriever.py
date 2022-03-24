@@ -1,6 +1,11 @@
-import gui, offline_navigation
+import gui, offline_navigation, online_navigation
 from utilities import *
 import pickle as pkl
+
+def save_grid_cells(grid_cells):
+	grid_cell_file = open('grid_cells', 'ab')
+	pkl.dump(grid_cells, grid_cell_file)
+	grid_cell_file.close()
 
 def save_environment(environment):
 	map_file = open('environment', 'ab')
@@ -26,6 +31,17 @@ def save_isomap(isomap):
 	isomap_file = open('isomap', 'ab')
 	pkl.dump(isomap, isomap_file)
 	isomap_file.close()
+
+def retrieve_grid_cells():
+	try:
+		grid_cell_file = open('grid_cells','rb')
+		grid_cells = pkl.load(grid_cell_file)
+		grid_cell_file.close()
+		return grid_cells
+	except:
+		grid_cells = online_navigation.create_all_grid_cells()
+		save_grid_cells(grid_cells)
+		return grid_cells
 
 def retrieve_environment():
 	try:

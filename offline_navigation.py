@@ -36,7 +36,7 @@ def calculate_error_by_gaussian(est_vals, real_vals):
 
 # In order to compare maps that are offset from each other, you must convert to cartesian coordinates,
 # Then you must center both at the origin, then convert both back into polar coordinates
-def offset_and_shift_map_at_origin(offset_x, offset_y, map_of_environment):
+def offset_and_shift_map_at_origin(offset_x, offset_y, map_at_origin):
 	# Initialize the sensory map that shall be shifted to approximate the current "investigating map" at the offset point
 	map_at_origin_shifted_to_fit_investigating_map = np.zeros((TICKS))
 	# For point in the shifted map, find an approximation in terms of valid values r, theta

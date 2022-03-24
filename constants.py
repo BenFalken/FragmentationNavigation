@@ -2,6 +2,7 @@ import numpy as np
 
 # The pixel dimensions for the window in which your environment can be drawn
 SIDE_LEN = 500
+
 # For efficiency's sake, we choose ever tenth point (row, col) to construct a sensory map
 STEP = 5
 
@@ -44,7 +45,9 @@ STM_RANGE = 10
 MAX_MEMORIES = 10
 
 # Constants for physical environment grid cell conversion
-NUM_GRID_CELLS = 1
+NUM_GRID_CELLS = 6
+
+#Stuff for BVCs
 BVC_PER_ROW, BVC_PER_COL = 100, 100
 PIXEL_PER_BVC = int(SIDE_LEN/BVC_PER_ROW)
 ENVIRONMENT_DIMEN = 5 	# meters
